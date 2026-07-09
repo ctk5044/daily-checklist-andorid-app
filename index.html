@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#3f4d36">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Routine">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Daily Routine</title>
+<style>
+  :root {
+    --ink: #2b2620;
+    --paper: #f6f2ea;
+    --paper-raised: #ffffff;
+    --rule: #d8cfc0;
+    --moss: #5c6e4f;
+    --moss-deep: #3f4d36;
+    --clay: #b5582f;
+    --gold: #c79a3d;
+    --shadow: 0 1px 2px rgba(43,38,32,0.08);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100%;
+  }
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: env(safe-area-inset-top, 18px) 16px 40px;
+    min-height: 100vh;
+  }
+  header {
+    padding: 14px 4px 10px;
+    text-align: center;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 14px;
+  }
+  header .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--moss);
+    font-weight: 600;
+  }
+  header h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 24px;
+    margin: 4px 0 2px;
+    font-weight: 700;
+    color: var(--moss-deep);
+  }
+  header .sub { font-size: 12.5px; color: #7a7164; }
+
+  .daypicker {
+    display: flex;
+    overflow-x: auto;
+    gap: 6px;
+    padding: 4px 0 14px;
+    scrollbar-width: none;
+  }
+  .daypicker::-webkit-scrollbar { display: none; }
+  .daypicker button {
+    flex: 0 0 auto;
+    border: 1px solid var(--rule);
+    background: var(--paper-raised);
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .daypicker button.active {
+    background: var(--moss-deep);
+    border-color: var(--moss-deep);
+    color: var(--paper);
+  }
+
+  /* Day progress bar */
+  .section-label {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #8a7f70;
+    margin-bottom: 5px;
+  }
+  .progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding: 0 2px;
+  }
+  .progress-track {
+    flex: 1;
+    height: 7px;
+    background: var(--rule);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--moss), var(--gold));
+    border-radius: 99px;
+    transition: width 0.35s ease;
+    width: 0%;
+  }
+  .progress-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--moss-deep);
+    white-space: nowrap;
+    min-width: 40px;
+    text-align: right;
+  }
+
+  /* List items */
+  ul.list { list-style: none; margin: 0; padding: 0; }
+  li.item {
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: opacity 0.15s ease;
+  }
+  li.item.checked { opacity: 0.5; }
+
+  .item-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .item-row:active { background: #f0ece2; }
+
+  .checkbox {
+    flex: 0 0 22px;
+    width: 22px; height: 22px;
+    border-radius: 7px;
+    border: 2px solid var(--moss);
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  li.item.checked .checkbox {
+    background: var(--moss);
+    border-color: var(--moss);
+  }
+  .checkbox svg.check {
+    width: 13px; height: 13px;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+  li.item.checked .checkbox svg.check { opacity: 1; }
+
+  .text-wrap { flex: 1; min-width: 0; }
+  .time {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--clay);
+    letter-spacing: 0.02em;
+  }
+  .label {
+    font-size: 14.5px;
+    line-height: 1.35;
+    margin-top: 1px;
+  }
+  li.item.checked .label {
+    text-decoration: line-through;
+    text-decoration-color: #a39a8a;
+  }
+
+  /* Expand arrow */
+  .expand-btn {
+    flex: 0 0 24px;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+    border-radius: 6px;
+    transition: background 0.1s ease;
+    cursor: pointer;
+  }
+  .expand-btn svg {
+    width: 14px; height: 14px;
+    stroke: #8a7f70;
+    transition: transform 0.2s ease;
+  }
+  .expand-btn.open svg { transform: rotate(180deg); }
+
+  /* Workout nested panel */
+  .workout-panel {
+    display: none;
+    padding: 0 14px 14px 14px;
+    border-top: 1px solid var(--rule);
+  }
+  .workout-panel.open { display: block; }
+
+  /* Workout mini progress bar */
+  .workout-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0 10px;
+  }
+  .workout-progress-label {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--moss-deep);
+    white-space: nowrap;
+  }
+  .workout-progress-track {
+    flex: 1;
+    height: 6px;
+    background: var(--rule);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .workout-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--clay), var(--gold));
+    border-radius: 99px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+  .workout-progress-count {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--clay);
+    white-space: nowrap;
+  }
+
+  /* Sub-items */
+  ul.sub-list { list-style: none; margin: 0; padding: 0; }
+  li.sub-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid #ede8de;
+    cursor: pointer;
+  }
+  li.sub-item:last-child { border-bottom: none; }
+  li.sub-item:active { opacity: 0.7; }
+  .sub-checkbox {
+    flex: 0 0 18px;
+    width: 18px; height: 18px;
+    border-radius: 5px;
+    border: 2px solid var(--clay);
+    margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s ease;
+  }
+  li.sub-item.checked .sub-checkbox {
+    background: var(--clay);
+    border-color: var(--clay);
+  }
+  .sub-checkbox svg {
+    width: 10px; height: 10px;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+  li.sub-item.checked .sub-checkbox svg { opacity: 1; }
+  .sub-label {
+    font-size: 13.5px;
+    line-height: 1.35;
+    color: var(--ink);
+  }
+  li.sub-item.checked .sub-label {
+    text-decoration: line-through;
+    text-decoration-color: #b8a898;
+    color: #9a8f80;
+  }
+  .sub-detail {
+    font-size: 11px;
+    color: #9a8f80;
+    margin-top: 2px;
+  }
+
+  .resetbar {
+    margin-top: 22px;
+    text-align: center;
+  }
+  .resetbar button {
+    background: none;
+    border: none;
+    color: #948a7a;
+    font-size: 12.5px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="eyebrow">Weekly Routine</div>
+    <h1>Today's List</h1>
+    <div class="sub" id="dateLabel"></div>
+  </header>
+
+  <div class="daypicker" id="daypicker"></div>
+
+  <div class="section-label">Day Progress</div>
+  <div class="progress-wrap">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-label" id="progressLabel">0/0</div>
+  </div>
+
+  <ul class="list" id="list"></ul>
+
+  <div class="resetbar">
+    <button id="resetBtn">Reset today's checkmarks</button>
+  </div>
+</div>
+
+<script>
+const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+
+// Workout sub-items per day: [label, detail]
+const WORKOUTS = {
+  Monday: {
+    title: "Workout: Push — Chest, Shoulders, Triceps (45 min)",
+    exercises: [
+      ["Warm-up", "5 min light cardio + arm circles"],
+      ["Barbell Bench Press", "3 sets × 8–10 reps"],
+      ["Overhead Press (barbell or dumbbell)", "3 sets × 8–10 reps"],
+      ["Incline Dumbbell Press", "3 sets × 10–12 reps"],
+      ["Lateral Raises", "3 sets × 12–15 reps"],
+      ["Tricep Pushdowns (cable or band)", "3 sets × 12–15 reps"],
+      ["Overhead Tricep Extension", "3 sets × 12–15 reps"],
+      ["Cool-down stretch", "2–3 min chest & shoulder stretch"]
+    ]
+  },
+  Tuesday: {
+    title: "Workout: Cardio — Zone 2 (30–40 min)",
+    exercises: [
+      ["Warm-up walk", "5 min easy pace"],
+      ["Zone 2 cardio", "25–30 min brisk incline walk, bike, or jog (HR 120–140 bpm)"],
+      ["Cool-down walk", "5 min easy pace"],
+      ["Standing quad & calf stretch", "60 sec each side"]
+    ]
+  },
+  Wednesday: {
+    title: "Workout: Yoga & Mobility — Hips, Spine, Shoulders (30 min)",
+    exercises: [
+      ["Cat-cow", "2 min — loosen spine"],
+      ["Hip flexor lunge stretch", "2 min each side"],
+      ["Pigeon pose", "2 min each side"],
+      ["Thoracic spine rotation", "10 reps each side"],
+      ["Chest & shoulder opener", "2 min"],
+      ["Child's pose", "2 min"],
+      ["Seated forward fold", "2 min"],
+      ["Savasana / breathing", "3 min"]
+    ]
+  },
+  Thursday: {
+    title: "Workout: Pull — Back, Biceps (45 min)",
+    exercises: [
+      ["Warm-up", "5 min light cardio + band pull-aparts"],
+      ["Deadlift or Romanian Deadlift", "3 sets × 8 reps"],
+      ["Pull-ups or Lat Pulldown", "3 sets × 8–10 reps"],
+      ["Barbell or Dumbbell Row", "3 sets × 10 reps"],
+      ["Face Pulls (cable or band)", "3 sets × 15 reps"],
+      ["Barbell or Dumbbell Bicep Curls", "3 sets × 12 reps"],
+      ["Hammer Curls", "3 sets × 12 reps"],
+      ["Cool-down stretch", "2–3 min lat & bicep stretch"]
+    ]
+  },
+  Friday: {
+    title: "Workout: Legs — Quads, Hamstrings, Glutes, Calves (45 min)",
+    exercises: [
+      ["Warm-up", "5 min walk + leg swings & hip circles"],
+      ["Back Squat or Goblet Squat", "3 sets × 8–10 reps"],
+      ["Romanian Deadlift", "3 sets × 10 reps"],
+      ["Leg Press", "3 sets × 12 reps"],
+      ["Walking Lunges", "3 sets × 12 reps each leg"],
+      ["Leg Curl (machine or band)", "3 sets × 12 reps"],
+      ["Standing Calf Raises", "3 sets × 15–20 reps"],
+      ["Cool-down stretch", "2–3 min hip flexor, quad & hamstring stretch"]
+    ]
+  },
+  Saturday: {
+    title: "Workout: Cardio — Higher Intensity Intervals (30–40 min)",
+    exercises: [
+      ["Warm-up walk/jog", "5 min easy pace"],
+      ["Interval 1", "30 sec sprint / 90 sec walk — repeat 8×"],
+      ["Active recovery", "5 min easy jog or walk"],
+      ["Cool-down walk", "5 min easy pace"],
+      ["Calf & hamstring stretch", "60 sec each side"]
+    ]
+  },
+  Sunday: {
+    title: "Workout: Yoga — Full Body Recovery (30 min)",
+    exercises: [
+      ["Neck rolls & shoulder shrugs", "2 min"],
+      ["Cat-cow & spinal wave", "2 min"],
+      ["Seated spinal twist", "2 min each side"],
+      ["Supine hamstring stretch", "2 min each side"],
+      ["Pigeon or figure-4 glute stretch", "2 min each side"],
+      ["Doorway chest opener", "2 min"],
+      ["Legs-up-the-wall", "3 min"],
+      ["Savasana / deep breathing", "5 min"]
+    ]
+  }
+};
+
+const SCHEDULE = {
+  Monday: [
+    {time:"6:00 AM", label:"Wake up"},
+    {time:"6:30 AM", label:"Workout: Push (45 min)", workout: true},
+    {time:"7:15 AM", label:"Breakfast"},
+    {time:"8:00 AM", label:"Commute to work (30 min)"},
+    {time:"8:30 AM", label:"Work begins"},
+    {time:"12:30 PM", label:"Lunch (30 min)"},
+    {time:"1:00 PM", label:"Work continues"},
+    {time:"4:30 PM", label:"Work ends / Commute home (30 min)"},
+    {time:"5:00 PM", label:"Daily Cleaning: Baseline tidy + Kitchen deep clean"},
+    {time:"5:30 PM", label:"Home improvement"},
+    {time:"6:30 PM", label:"Dinner"},
+    {time:"7:15 PM", label:"Catch up on shows"},
+    {time:"8:15 PM", label:"Watch fireflies (summer)"},
+    {time:"8:45 PM", label:"Journal"},
+    {time:"9:00 PM", label:"Reading"},
+    {time:"9:45 PM", label:"Wind down"},
+    {time:"10:00 PM", label:"Sleep"}
+  ],
+  Tuesday: [
+    {time:"6:00 AM", label:"Wake up"},
+    {time:"6:30 AM", label:"Workout: Cardio – Zone 2 (30–40 min)", workout: true},
+    {time:"7:15 AM", label:"Breakfast"},
+    {time:"8:00 AM", label:"Commute to work (30 min)"},
+    {time:"8:30 AM", label:"Work begins"},
+    {time:"12:30 PM", label:"Lunch (30 min)"},
+    {time:"1:00 PM", label:"Work continues"},
+    {time:"4:30 PM", label:"Work ends / Commute home (30 min)"},
+    {time:"5:00 PM", label:"Daily Cleaning: Baseline tidy + Bathroom(s)"},
+    {time:"5:30 PM", label:"Home improvement"},
+    {time:"6:30 PM", label:"Dinner"},
+    {time:"7:15 PM", label:"Catch up on shows"},
+    {time:"8:15 PM", label:"Watch fireflies (summer)"},
+    {time:"8:45 PM", label:"Journal"},
+    {time:"9:00 PM", label:"Reading"},
+    {time:"9:45 PM", label:"Wind down"},
+    {time:"10:00 PM", label:"Sleep"}
+  ],
+  Wednesday: [
+    {time:"6:00 AM", label:"Wake up"},
+    {time:"6:30 AM", label:"Workout: Yoga/Stretching – Mobility (30 min)", workout: true},
+    {time:"7:15 AM", label:"Breakfast"},
+    {time:"8:00 AM", label:"Commute to work (30 min)"},
+    {time:"8:30 AM", label:"Work begins"},
+    {time:"12:30 PM", label:"Lunch (30 min)"},
+    {time:"1:00 PM", label:"Work continues"},
+    {time:"4:30 PM", label:"Work ends / Commute home (30 min)"},
+    {time:"5:00 PM", label:"Daily Cleaning: Baseline tidy + Vacuum/sweep floors"},
+    {time:"5:30 PM", label:"Home improvement"},
+    {time:"6:30 PM", label:"Dinner"},
+    {time:"7:15 PM", label:"Catch up on shows"},
+    {time:"8:15 PM", label:"Watch fireflies (summer)"},
+    {time:"8:45 PM", label:"Journal"},
+    {time:"9:00 PM", label:"Reading"},
+    {time:"9:45 PM", label:"Wind down"},
+    {time:"10:00 PM", label:"Sleep"}
+  ],
+  Thursday: [
+    {time:"6:00 AM", label:"Wake up"},
+    {time:"6:30 AM", label:"Workout: Pull (45 min)", workout: true},
+    {time:"7:15 AM", label:"Breakfast"},
+    {time:"8:00 AM", label:"Commute to work (30 min)"},
+    {time:"8:30 AM", label:"Work begins"},
+    {time:"12:30 PM", label:"Lunch (30 min)"},
+    {time:"1:00 PM", label:"Work continues"},
+    {time:"4:30 PM", label:"Work ends / Commute home (30 min)"},
+    {time:"5:00 PM", label:"Daily Cleaning: Baseline tidy + Dusting"},
+    {time:"5:30 PM", label:"Home improvement"},
+    {time:"6:30 PM", label:"Dinner"},
+    {time:"7:15 PM", label:"Catch up on shows"},
+    {time:"8:15 PM", label:"Watch fireflies (summer)"},
+    {time:"8:45 PM", label:"Journal"},
+    {time:"9:00 PM", label:"Reading"},
+    {time:"9:45 PM", label:"Wind down"},
+    {time:"10:00 PM", label:"Sleep"}
+  ],
+  Friday: [
+    {time:"6:00 AM", label:"Wake up"},
+    {time:"6:30 AM", label:"Workout: Legs (45 min)", workout: true},
+    {time:"7:15 AM", label:"Breakfast"},
+    {time:"8:00 AM", label:"Commute to work (30 min)"},
+    {time:"8:30 AM", label:"Work begins"},
+    {time:"12:30 PM", label:"Lunch (30 min)"},
+    {time:"1:00 PM", label:"Work continues"},
+    {time:"4:30 PM", label:"Work ends / Commute home (30 min)"},
+    {time:"5:00 PM", label:"Daily Cleaning: Baseline tidy + Laundry"},
+    {time:"5:30 PM", label:"Home improvement"},
+    {time:"6:30 PM", label:"Dinner"},
+    {time:"7:15 PM", label:"Catch up on shows"},
+    {time:"8:15 PM", label:"Watch fireflies (summer)"},
+    {time:"8:45 PM", label:"Journal"},
+    {time:"9:00 PM", label:"Reading"},
+    {time:"9:45 PM", label:"Wind down"},
+    {time:"10:00 PM", label:"Sleep"}
+  ],
+  Saturday: [
+    {time:"6:00 AM", label:"Wake up"},
+    {time:"6:30 AM", label:"Workout: Cardio – Intervals (30–40 min)", workout: true},
+    {time:"7:15 AM", label:"Breakfast"},
+    {time:"5:00 PM", label:"Daily Cleaning: Baseline tidy + Bedroom tidy + change sheets"},
+    {time:"5:30 PM", label:"Home improvement"},
+    {time:"6:30 PM", label:"Dinner"},
+    {time:"7:15 PM", label:"Catch up on shows"},
+    {time:"8:15 PM", label:"Watch fireflies (summer)"},
+    {time:"8:45 PM", label:"Journal"},
+    {time:"9:00 PM", label:"Reading"},
+    {time:"9:45 PM", label:"Wind down"},
+    {time:"10:00 PM", label:"Sleep"}
+  ],
+  Sunday: [
+    {time:"6:00 AM", label:"Wake up"},
+    {time:"6:30 AM", label:"Workout: Yoga/Stretching – Recovery (30 min)", workout: true},
+    {time:"7:15 AM", label:"Breakfast"},
+    {time:"5:00 PM", label:"Daily Cleaning: Baseline tidy + Living areas reset + trash/recycling"},
+    {time:"5:30 PM", label:"Home improvement"},
+    {time:"6:30 PM", label:"Dinner"},
+    {time:"7:15 PM", label:"Catch up on shows"},
+    {time:"8:15 PM", label:"Watch fireflies (summer)"},
+    {time:"8:45 PM", label:"Journal"},
+    {time:"9:00 PM", label:"Reading"},
+    {time:"9:45 PM", label:"Wind down"},
+    {time:"10:00 PM", label:"Sleep"}
+  ]
+};
+
+let currentDay = DAYS[(new Date().getDay() + 6) % 7];
+let checkedState = {};    // { Monday: [bool, ...] }
+let workoutState = {};    // { Monday: [bool, ...] }
+let workoutExpanded = {}; // { Monday: bool }
+
+function todayDateString() {
+  return new Date().toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
+}
+
+function weekPrefix() {
+  const d = new Date();
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return `wk:${monday.toISOString().slice(0,10)}`;
+}
+
+function storageKey(day) { return `${weekPrefix()}:${day}`; }
+function workoutKey(day) { return `${weekPrefix()}:workout:${day}`; }
+
+function loadDay(day) {
+  currentDay = day;
+  renderDayPicker();
+  document.getElementById('dateLabel').textContent = todayDateString();
+
+  const items = SCHEDULE[day];
+  let saved = null;
+  try { const r = localStorage.getItem(storageKey(day)); if (r) saved = JSON.parse(r); } catch(e){}
+  if (!saved || saved.length !== items.length) saved = items.map(() => false);
+  checkedState[day] = saved;
+
+  const exs = WORKOUTS[day].exercises;
+  let wsaved = null;
+  try { const r = localStorage.getItem(workoutKey(day)); if (r) wsaved = JSON.parse(r); } catch(e){}
+  if (!wsaved || wsaved.length !== exs.length) wsaved = exs.map(() => false);
+  workoutState[day] = wsaved;
+
+  if (workoutExpanded[day] === undefined) workoutExpanded[day] = false;
+
+  renderList();
+}
+
+function saveDay() {
+  try { localStorage.setItem(storageKey(currentDay), JSON.stringify(checkedState[currentDay])); } catch(e){}
+  try { localStorage.setItem(workoutKey(currentDay), JSON.stringify(workoutState[currentDay])); } catch(e){}
+}
+
+function renderDayPicker() {
+  const wrap = document.getElementById('daypicker');
+  wrap.innerHTML = '';
+  DAYS.forEach(day => {
+    const btn = document.createElement('button');
+    btn.textContent = day.slice(0,3);
+    if (day === currentDay) btn.classList.add('active');
+    btn.onclick = () => loadDay(day);
+    wrap.appendChild(btn);
+  });
+}
+
+function checkSvg(stroke) {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+}
+
+function renderList() {
+  const items = SCHEDULE[currentDay];
+  const state = checkedState[currentDay];
+  const wState = workoutState[currentDay];
+  const workout = WORKOUTS[currentDay];
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+
+  items.forEach((item, idx) => {
+    const li = document.createElement('li');
+    li.className = 'item' + (state[idx] ? ' checked' : '');
+
+    if (item.workout) {
+      // --- Workout item with nested panel ---
+      const wDone = wState.filter(Boolean).length;
+      const wTotal = wState.length;
+      const wPct = wTotal ? Math.round((wDone / wTotal) * 100) : 0;
+      const isOpen = workoutExpanded[currentDay];
+
+      li.innerHTML = `
+        <div class="item-row" id="workout-row-${idx}">
+          <div class="checkbox">${checkSvg('white')}</div>
+          <div class="text-wrap">
+            <div class="time">${item.time}</div>
+            <div class="label">${workout.title}</div>
+          </div>
+          <div class="expand-btn ${isOpen ? 'open' : ''}" id="expand-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div class="workout-panel ${isOpen ? 'open' : ''}" id="workout-panel">
+          <div class="workout-progress-wrap">
+            <div class="workout-progress-label">Exercises</div>
+            <div class="workout-progress-track">
+              <div class="workout-progress-fill" id="workout-prog-fill" style="width:${wPct}%"></div>
+            </div>
+            <div class="workout-progress-count" id="workout-prog-count">${wDone}/${wTotal}</div>
+          </div>
+          <ul class="sub-list" id="sub-list"></ul>
+        </div>
+      `;
+
+      list.appendChild(li);
+
+      // Render sub-items
+      const subList = li.querySelector('#sub-list');
+      wState.forEach((done, widx) => {
+        const ex = workout.exercises[widx];
+        const sli = document.createElement('li');
+        sli.className = 'sub-item' + (done ? ' checked' : '');
+        sli.innerHTML = `
+          <div class="sub-checkbox">${checkSvg('white')}</div>
+          <div>
+            <div class="sub-label">${ex[0]}</div>
+            <div class="sub-detail">${ex[1]}</div>
+          </div>
+        `;
+        sli.onclick = (e) => {
+          e.stopPropagation();
+          wState[widx] = !wState[widx];
+          sli.classList.toggle('checked');
+          // Auto-check parent if all done
+          const allDone = wState.every(Boolean);
+          if (allDone && !state[idx]) {
+            state[idx] = true;
+            li.classList.add('checked');
+          } else if (!wState[widx] && state[idx]) {
+            state[idx] = false;
+            li.classList.remove('checked');
+          }
+          updateWorkoutProgress(wState, workout.exercises.length);
+          updateProgress();
+          saveDay();
+        };
+        subList.appendChild(sli);
+      });
+
+      // Toggle expand
+      const expandBtn = li.querySelector('#expand-btn');
+      const panel = li.querySelector('#workout-panel');
+      const row = li.querySelector(`#workout-row-${idx}`);
+
+      expandBtn.onclick = (e) => {
+        e.stopPropagation();
+        workoutExpanded[currentDay] = !workoutExpanded[currentDay];
+        panel.classList.toggle('open');
+        expandBtn.classList.toggle('open');
+      };
+
+      // Checkbox click on main row
+      row.onclick = (e) => {
+        if (e.target.closest('.expand-btn')) return;
+        state[idx] = !state[idx];
+        li.classList.toggle('checked');
+        updateProgress();
+        saveDay();
+      };
+
+    } else {
+      // --- Regular item ---
+      li.innerHTML = `
+        <div class="item-row">
+          <div class="checkbox">${checkSvg('white')}</div>
+          <div class="text-wrap">
+            <div class="time">${item.time}</div>
+            <div class="label">${item.label}</div>
+          </div>
+        </div>
+      `;
+      li.querySelector('.item-row').onclick = () => {
+        state[idx] = !state[idx];
+        li.classList.toggle('checked');
+        updateProgress();
+        saveDay();
+      };
+      list.appendChild(li);
+    }
+  });
+
+  updateProgress();
+  updateWorkoutProgress(wState, WORKOUTS[currentDay].exercises.length);
+}
+
+function updateWorkoutProgress(wState, total) {
+  const fill = document.getElementById('workout-prog-fill');
+  const count = document.getElementById('workout-prog-count');
+  if (!fill || !count) return;
+  const done = wState.filter(Boolean).length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  fill.style.width = pct + '%';
+  count.textContent = `${done}/${total}`;
+}
+
+function updateProgress() {
+  const state = checkedState[currentDay];
+  const total = state.length;
+  const done = state.filter(Boolean).length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${done}/${total}`;
+}
+
+document.getElementById('resetBtn').onclick = () => {
+  const items = SCHEDULE[currentDay];
+  checkedState[currentDay] = items.map(() => false);
+  workoutState[currentDay] = WORKOUTS[currentDay].exercises.map(() => false);
+  renderList();
+  saveDay();
+};
+
+loadDay(currentDay);
+
+// Register service worker for PWA offline support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .catch(err => console.log('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
